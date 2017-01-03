@@ -14,9 +14,11 @@
     "xml2js": "^0.4.17"
   },
   "scripts": {
-    "test": "nyc mocha test"
+    "test": "nyc mocha test",
+    "coverage": "nyc report --reporter=text-lcov | coveralls"
   },
   "devDependencies": {
+    "coveralls": "^2.11.15",
     "nyc": "^10.0.0"
   }
 }
