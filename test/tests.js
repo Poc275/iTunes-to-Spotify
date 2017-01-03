@@ -1,9 +1,11 @@
 var fs = require('fs');
+var path = require('path');
 var xml2js = require('xml2js');
 var expect = require('chai').expect;
 var Track = require('../models/Track');
 var Playlist = require('../models/Playlist');
 var XMLParser = require('../models/XMLParser');
+
 
 describe('object instantiation tests', function() {
 	var parser = new XMLParser();
@@ -22,6 +24,7 @@ describe('object instantiation tests', function() {
 		expect(track).to.be.an.instanceOf(Track);
 	});
 });
+
 
 describe('iTunes xml parsing tests', function () {
 	var parser = new XMLParser();
@@ -50,6 +53,38 @@ describe('iTunes xml parsing tests', function () {
     	});
     });
 });
+
+
+describe('File upload tests', function () {
+	var parser = new XMLParser();
+	var fakeParser = new XMLParser();
+
+	before(function(done) {
+		fs.readFile(path.join(__dirname, '../data/buffer.txt'), function(err, data) {
+			if(err) {
+				throw err;
+			}
+
+			parser.parseBuffer(data, function(err) {
+				if(err) {
+					throw err;
+				}
+				done();
+			});
+		});
+	});
+
+    it('uploaded file buffer can be read OK', function() {
+    	expect(parser._parsedXml).to.not.be.null;
+    });
+
+    it('failed upload throws error', function() {
+    	fakeParser.parseBuffer(null, function(err) {
+    		expect(err).to.not.be.null;
+    	});
+    });
+});
+
 
 describe('iTunes single playlist xml file tests', function() {
 	var parser = new XMLParser();
@@ -93,6 +128,7 @@ describe('iTunes single playlist xml file tests', function() {
 	});
 });
 
+
 describe('iTunes single playlist xml file track tests', function() {
 	var parser = new XMLParser();
 
@@ -134,6 +170,7 @@ describe('iTunes single playlist xml file track tests', function() {
 		expect(track).to.be.undefined;
 	});
 });
+
 
 describe('iTunes full library xml file tests', function() {
 	var parser = new XMLParser();

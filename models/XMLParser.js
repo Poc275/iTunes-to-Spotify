@@ -35,6 +35,21 @@ XMLParser.prototype.parse = function(filename, callback) {
 	});
 }
 
+XMLParser.prototype.parseBuffer = function(buffer, callback) {
+	var parser = new xml2js.Parser();
+	var self = this;
+
+    parser.parseString(buffer, function(err, result) {
+      if(err) {
+      	var err = new Error('Failed to parse XML');
+      	return callback(err);
+      }
+      
+      self._parsedXml = result;
+      return callback(null);
+    });
+}
+
 XMLParser.prototype.getPlaylists = function() {
 	var playlists = this._parsedXml.plist.dict[0].array[0].dict;
 

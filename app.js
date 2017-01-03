@@ -12,12 +12,15 @@ var request = require('request'); // "Request" library
 var querystring = require('querystring');
 var cookieParser = require('cookie-parser');
 var config = require('./config.js');
+var multer = require('multer');
+var storage = multer.memoryStorage();
+var upload = multer({ storage: storage }).single('itunesXmlFile');
+
+var XMLParser = require('./models/XMLParser');
 
 var client_id = config.client_id;
 var client_secret = config.client_secret;
 var redirect_uri = config.redirect_uri;
-
-const util = require('util');
 
 /**
  * Generates a random string containing numbers and letters
@@ -144,10 +147,25 @@ app.get('/refresh_token', function(req, res) {
 });
 
 
-app.get('/upload', function(req, res) {
-  
-});
+app.post('/upload', function(req, res) {
+  var parser;
 
+  upload(req, res, function(err) {
+    if(err) {
+      console.log('Error reading uploaded file');
+      res.sendStatus(400);
+    }
+
+    parser = new XMLParser();
+    parser.parseBuffer(req.file.buffer, function(err) {
+      if(err) {
+        throw err;
+      }
+      console.log(parser._parsedXml);
+      res.sendStatus(200);
+    });
+  });
+});
 
 
 console.log('Listening on 8888');
