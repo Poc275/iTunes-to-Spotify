@@ -19,14 +19,24 @@
   <body>
     <div class="container">
       <div id="login">
-        <h1>This is an example of the Authorization Code flow</h1>
+        <h1>iTunes to Spotify exporter</h1>
+        <ol>
+          <li>Log in with Spotify</li>
+          <li>Export your iTunes playlists/library in .xml format</li>
+          <li>Upload the .xml file</li>
+          <li>Decide what to export</li>
+          <li>Create the playlists in Spotify!</li>
+        </ol>
         <a href="/login" class="btn btn-primary">Log in with Spotify</a>
       </div>
+
       <div id="loggedin">
         <div id="user-profile">
         </div>
+
         <div id="oauth">
         </div>
+
         <button class="btn btn-default" id="obtain-new-token">Obtain new token using the refresh token</button>
         
         <!-- xml file upload button -->
@@ -34,6 +44,12 @@
           <input type="file" name="itunesXmlFile" accept=".xml" required />
           <input type="submit" class="btn btn-default" value="Upload iTunes .xml file" name="submit" />
         </form>
+
+        <div id="playlists">
+        </div>
+
+        <div id="tracks">
+        </div>
         
       </div>
     </div>
@@ -66,6 +82,33 @@
       </dl>
     </script>
 
+    <script id="playlists-template" type="text/x-handlebars-template">
+      <h2>We found {{this.length}} {{pluralPlaylistCheck this.length}}</h2>
+      <ul>
+        {{#each this}}
+          <li>{{_name}} 
+
+            <button class="btn btn-xs get-tracks-button" type="button" name="{{_name}}">
+              View Tracks
+            </button>
+
+            <button class="btn btn-xs export-button" type="button" name="{{_name}}">
+              Export to Spotify
+            </button>
+          </li>
+        {{/each}}
+      </ul>
+    </script>
+
+    <script id="playlist-tracks-template" type="text/x-handlebars-template">
+      <h3>{{selectedPlaylist}} - {{this.length}} {{pluralTrackCheck this.length}}</h3>
+      <ul>
+        {{#each this}}
+          <li>{{_title}} - {{_artist}} ({{_album}})</li>
+        {{/each}}
+      </ul>
+    </script>
+
     <script src="//cdnjs.cloudflare.com/ajax/libs/handlebars.js/2.0.0-alpha.1/handlebars.min.js"></script>
     <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
     <script src="http://cdnjs.cloudflare.com/ajax/libs/jquery.form/3.51/jquery.form.min.js"></script>
@@ -78,32 +121,68 @@
          */
         function getHashParams() {
           var hashParams = {};
-          var e, r = /([^&;=]+)=?([^&;]*)/g,
-              q = window.location.hash.substring(1);
+          var e, r = /([^&;=]+)=?([^&;]*)/g;
+          var q = window.location.hash.substring(1);
           while ( e = r.exec(q)) {
              hashParams[e[1]] = decodeURIComponent(e[2]);
           }
           return hashParams;
         }
 
-        var userProfileSource = document.getElementById('user-profile-template').innerHTML,
-            userProfileTemplate = Handlebars.compile(userProfileSource),
-            userProfilePlaceholder = document.getElementById('user-profile');
+        var user;
+        var accessToken;
 
-        var oauthSource = document.getElementById('oauth-template').innerHTML,
-            oauthTemplate = Handlebars.compile(oauthSource),
-            oauthPlaceholder = document.getElementById('oauth');
+        var userProfileSource = document.getElementById('user-profile-template').innerHTML;
+        var userProfileTemplate = Handlebars.compile(userProfileSource);
+        var userProfilePlaceholder = document.getElementById('user-profile');
+
+        var oauthSource = document.getElementById('oauth-template').innerHTML;
+        var oauthTemplate = Handlebars.compile(oauthSource);
+        var oauthPlaceholder = document.getElementById('oauth');
+
+        var playlistSource = document.getElementById('playlists-template').innerHTML;
+        var playlistsTemplate = Handlebars.compile(playlistSource);
+        var playlistsPlaceholder = document.getElementById('playlists');
+
+        // handlebars helpers to check for plurals
+        Handlebars.registerHelper('pluralPlaylistCheck', function(length) {
+          if(length === 1) {
+            return 'Playlist';
+          } else {
+            return 'Playlists';
+          }
+        });
+
+        Handlebars.registerHelper('pluralTrackCheck', function(length) {
+          if(length === 1) {
+            return 'Track';
+          } else {
+            return 'Tracks';
+          }
+        });
+
+        var playlistTracksSource = document.getElementById('playlist-tracks-template').innerHTML;
+        var playlistTracksTemplate = Handlebars.compile(playlistTracksSource);
+        var playlistTracksPlaceholder = document.getElementById('tracks');
+        var selectedPlaylist;
+
+        Handlebars.registerHelper('selectedPlaylist', function() {
+          return selectedPlaylist;
+        });
 
         var params = getHashParams();
 
-        var access_token = params.access_token,
-            refresh_token = params.refresh_token,
-            error = params.error;
+        var access_token = params.access_token;
+        var refresh_token = params.refresh_token;
+        var error = params.error;
 
         if (error) {
           alert('There was an error during the authentication');
         } else {
           if (access_token) {
+            // store reference to access token for future requests
+            accessToken = access_token;
+
             // render oauth info
             oauthPlaceholder.innerHTML = oauthTemplate({
               access_token: access_token,
@@ -117,6 +196,9 @@
                 },
                 success: function(response) {
                   userProfilePlaceholder.innerHTML = userProfileTemplate(response);
+
+                  // store reference to user for future requests
+                  user = response.id;
 
                   $('#login').hide();
                   $('#loggedin').show();
@@ -136,12 +218,17 @@
               }
             }).done(function(data) {
               access_token = data.access_token;
+
+              // update reference to access token
+              accessToken = data.access_token;
+
               oauthPlaceholder.innerHTML = oauthTemplate({
                 access_token: access_token,
                 refresh_token: refresh_token
               });
             });
           }, false);
+
 
           // upload itunes .xml file
           $('#itunes-upload-form').submit(function() {
@@ -150,7 +237,48 @@
                 console.log('Error: ' + xhr.status);
               },
               success: function(response) {
-                console.log(response);
+                playlistsPlaceholder.innerHTML = playlistsTemplate(response);
+
+                // now that we have playlists, register the get tracks/export button click events
+                var getTracksButtons = document.getElementsByClassName('get-tracks-button');
+                var exportButtons = document.getElementsByClassName('export-button');
+
+                for(var i = 0; i < getTracksButtons.length; i++) {
+                  getTracksButtons[i].addEventListener('click', function(event) {
+                    selectedPlaylist = event.target.name;
+
+                    $.ajax({
+                      url: selectedPlaylist + '/tracks',
+                      error: function(xhr) {
+                        console.log('Error: ' + xhr.status);
+                      },
+                      success: function(response) {
+                        playlistTracksPlaceholder.innerHTML = playlistTracksTemplate(response);
+                      }
+                    });
+                  });
+                }
+
+                for(var i = 0; i < exportButtons.length; i++) {
+                  exportButtons[i].addEventListener('click', function(event) {
+                    selectedPlaylist = event.target.name;
+
+                    console.log(JSON.stringify({ 'user': user }));
+
+                    $.ajax({
+                      type: 'POST',
+                      url: selectedPlaylist + '/export',
+                      data: JSON.stringify({ 'user': user, 'access_token': accessToken }),
+                      contentType: 'application/json; charset=utf-8',
+                      error: function(xhr) {
+                        console.log('Error: ' + xhr.status);
+                      },
+                      success: function(response) {
+                        console.log(response);
+                      }
+                    });
+                  });
+                }
               }
             });
 

@@ -15,8 +15,10 @@ var config = require('./config.js');
 var multer = require('multer');
 var storage = multer.memoryStorage();
 var upload = multer({ storage: storage }).single('itunesXmlFile');
+var bodyParser = require('body-parser');
 
 var XMLParser = require('./models/XMLParser');
+var parser;
 
 var client_id = config.client_id;
 var client_secret = config.client_secret;
@@ -42,6 +44,7 @@ var stateKey = 'spotify_auth_state';
 var app = express();
 
 app.use(express.static(__dirname + '/public')).use(cookieParser());
+app.use(bodyParser.json());
 
 app.get('/login', function(req, res) {
 
@@ -49,7 +52,7 @@ app.get('/login', function(req, res) {
   res.cookie(stateKey, state);
 
   // your application requests authorization
-  var scope = 'user-read-private user-read-email';
+  var scope = 'user-read-private user-read-email playlist-modify-public playlist-modify-private';
   res.redirect('https://accounts.spotify.com/authorize?' +
     querystring.stringify({
       response_type: 'code',
@@ -92,8 +95,8 @@ app.get('/callback', function(req, res) {
     request.post(authOptions, function(error, response, body) {
       if (!error && response.statusCode === 200) {
 
-        var access_token = body.access_token,
-            refresh_token = body.refresh_token;
+        var access_token = body.access_token;
+        var refresh_token = body.refresh_token;
 
         var options = {
           url: 'https://api.spotify.com/v1/me',
@@ -148,8 +151,6 @@ app.get('/refresh_token', function(req, res) {
 
 
 app.post('/upload', function(req, res) {
-  var parser;
-
   upload(req, res, function(err) {
     if(err) {
       console.log('Error reading uploaded file');
@@ -161,9 +162,56 @@ app.post('/upload', function(req, res) {
       if(err) {
         throw err;
       }
-      console.log(parser._parsedXml);
-      res.sendStatus(200);
+      parser.getPlaylists();
+      parser.getTracks();
+      res.json(parser._playlists);
     });
+  });
+});
+
+
+app.get('/:playlist/tracks', function(req, res) {
+  var playlist = parser.getPlaylistByName(req.params.playlist);
+  var tracks = [];
+
+  if(playlist === undefined) {
+    return res.sendStatus(404);
+  }
+
+  playlist._trackIds.forEach(function(id) {
+    tracks.push(parser.getTrackById(id));
+  });
+
+  res.json(tracks);
+});
+
+
+app.post('/:playlist/export', function(req, res) {
+  var playlist = parser.getPlaylistByName(req.params.playlist);
+  var user = req.body.user;
+  var accessToken = req.body.access_token;
+
+  if(playlist === undefined) {
+    return res.sendStatus(404);
+  }
+
+  // create playlist
+  var authOptions = {
+    url: 'https://api.spotify.com/v1/users/' + user + '/playlists',
+    headers: { 'Authorization': 'Bearer ' + accessToken },
+    body: JSON.stringify({name: playlist._name, public: false}),
+    json: true
+  };
+
+  request.post(authOptions, function(error, response, body) {
+    if (!error) {
+      // playlist created OK, now add the tracks
+      playlist._trackIds.forEach(function(id) {
+        
+      });
+    }
+
+    res.sendStatus(400);
   });
 });
 

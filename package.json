@@ -4,6 +4,7 @@
   "description": "Exports iTunes playlists to Spotify",
   "version": "0.0.1",
   "dependencies": {
+    "body-parser": "^1.15.2",
     "chai": "^3.5.0",
     "cookie-parser": "1.3.2",
     "express": "^4.14.0",

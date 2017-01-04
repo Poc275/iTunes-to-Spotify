@@ -122,6 +122,11 @@ describe('iTunes single playlist xml file tests', function() {
 		expect(playlist._trackIds).to.have.lengthOf(23);
 	});
 
+	it('get another playlist test', function() {
+		var playlist = parser.getPlaylistByName('Best Bits');
+		expect(playlist._trackIds).to.have.lengthOf(23);
+	});
+
 	it('get playlist by name returns undefined if playlist does not exist', function() {
 		var playlist = parser.getPlaylistByName('fake');
 		expect(playlist).to.be.undefined;
