@@ -13,6 +13,9 @@
         white-space: nowrap;
         width: 500px;
       }
+      .exported {
+        color: green;
+      }
     </style>
   </head>
 
@@ -104,7 +107,7 @@
       <h3>{{selectedPlaylist}} - {{this.length}} {{pluralTrackCheck this.length}}</h3>
       <ul>
         {{#each this}}
-          <li>{{_title}} - {{_artist}} ({{_album}})</li>
+          <li class="{{#if _spotifyUri}} exported {{/if}}">{{_title}} - {{_artist}} ({{_album}})</li>
         {{/each}}
       </ul>
     </script>
@@ -274,7 +277,7 @@
                         console.log('Error: ' + xhr.status);
                       },
                       success: function(response) {
-                        console.log(response);
+                        playlistTracksPlaceholder.innerHTML = playlistTracksTemplate(response);
                       }
                     });
                   });

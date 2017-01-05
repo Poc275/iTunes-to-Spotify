@@ -190,6 +190,9 @@ app.post('/:playlist/export', function(req, res) {
   var playlist = parser.getPlaylistByName(req.params.playlist);
   var user = req.body.user;
   var accessToken = req.body.access_token;
+  var searchEndpoint = 'https://api.spotify.com/v1/search?q=';
+  var result = [];
+  var tracksToAdd = [];
 
   if(playlist === undefined) {
     return res.sendStatus(404);
@@ -204,14 +207,60 @@ app.post('/:playlist/export', function(req, res) {
   };
 
   request.post(authOptions, function(error, response, body) {
-    if (!error) {
+    if (!body.error) {
       // playlist created OK, now add the tracks
-      playlist._trackIds.forEach(function(id) {
-        
+      var playlistId = body.id;
+
+      // use promises so we can wait until all track search requests are complete
+      // => allows us to access the calling object i.e. no need for var self = this;
+      // we need to use .map because .forEach doesn't return anything and cannot support chaining
+      var addTrackRequests = playlist._trackIds.map((item) => {
+        return new Promise((resolve) => {
+          var track = parser.getTrackById(item);
+          // console.log(track);
+          result.push(track);
+          var url = searchEndpoint + track.toString() + '&type=track';
+
+          console.log(url);
+
+          request.get(url, function(error, response, body) {
+            if(!body.error) {
+              // console.log(body);
+              var jsonResponse = JSON.parse(body);
+
+              if(jsonResponse.tracks.items.length > 0) {
+                track._spotifyUri = jsonResponse.tracks.items[0].uri;
+                tracksToAdd.push(track._spotifyUri);
+              }
+            }
+
+            resolve();
+          });
+        });
+      });
+
+      // when all track promises have completed add to the playlist
+      Promise.all(addTrackRequests).then(function() {
+        var playlistOptions = {
+          url: 'https://api.spotify.com/v1/users/' + user + '/playlists/' + playlistId + '/tracks',
+          headers: { 'Authorization': 'Bearer ' + accessToken },
+          body: JSON.stringify({ uris: tracksToAdd.slice(0, 99) }),
+          json: true
+        };
+
+        var i = 0;
+
+        request.post(playlistOptions, function(error, response, body) {
+          console.log(++i, body);
+          
+          if(!body.error) {
+            res.status(201).send(result);
+          }
+        });
       });
     }
 
-    res.sendStatus(400);
+    // res.sendStatus(400);
   });
 });
 
