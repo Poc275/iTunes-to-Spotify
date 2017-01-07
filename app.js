@@ -190,9 +190,12 @@ app.post('/:playlist/export', function(req, res) {
   var playlist = parser.getPlaylistByName(req.params.playlist);
   var user = req.body.user;
   var accessToken = req.body.access_token;
-  var searchEndpoint = 'https://api.spotify.com/v1/search?q=';
-  var result = [];
-  var tracksToAdd = [];
+  var tracks = [];
+
+  // consts are empirical, documentation doesn't state
+  // what the actual limits are...
+  const chunkSize = 80;
+  const wait = 10000;
 
   if(playlist === undefined) {
     return res.sendStatus(404);
@@ -207,62 +210,112 @@ app.post('/:playlist/export', function(req, res) {
   };
 
   request.post(authOptions, function(error, response, body) {
-    if (!body.error) {
+    if (!error && response.statusCode == 201) {
       // playlist created OK, now add the tracks
       var playlistId = body.id;
+      var chunks = [];
+      var x = 0;
+      
+      // split into chunks to avoid hitting API rate limit
+      for(var i = 0; i < playlist._trackIds.length; i += chunkSize) {
+        chunks.push(playlist._trackIds.slice(i, i + chunkSize));
+      }
 
-      // use promises so we can wait until all track search requests are complete
-      // => allows us to access the calling object i.e. no need for var self = this;
-      // we need to use .map because .forEach doesn't return anything and cannot support chaining
-      var addTrackRequests = playlist._trackIds.map((item) => {
-        return new Promise((resolve) => {
-          var track = parser.getTrackById(item);
-          // console.log(track);
-          result.push(track);
-          var url = searchEndpoint + track.toString() + '&type=track';
+      var loopChunks = function(chunk) {
+        console.log('chunk ', x + 1, ' request started');
+        addTracksToPlaylist(chunks[x], user, playlistId, accessToken, function(err, result) {
+          if(err) {
+            console.log('Error adding tracks: ', err, result);
+            res.sendStatus(400);
+          }
 
-          console.log(url);
+          // add promise track response to result array
+          // which we return to the user to show if the track was added
+          result.forEach(function(track) {
+            tracks.push(track);
+          });
 
-          request.get(url, function(error, response, body) {
-            if(!body.error) {
-              // console.log(body);
-              var jsonResponse = JSON.parse(body);
+          console.log('chunk ', x + 1, ' completed');
 
+          x++;
+          if(x < chunks.length) {
+            // wait before sending the next request to avoid hitting rate limit
+            setTimeout(function() {
+              loopChunks(chunks);
+            }, wait);
+          } else {
+            console.log('all chunks processed');
+            res.status(201).send(tracks);
+          }
+        });
+      };
+
+      loopChunks(chunks);
+    }
+  });  
+});
+
+
+function addTracksToPlaylist(trackIds, user, playlistId, accessToken, callback) {
+  var searchEndpoint = 'https://api.spotify.com/v1/search?q=';
+  var getTrackAuth = {
+    'Authorization': 'Bearer ' + accessToken
+  };
+  var tracksToAdd = [];
+
+  // use promises so we can wait until all track search requests are complete
+  // => allows us to access the calling object i.e. no need for var self = this;
+  // we need to use .map because .forEach doesn't return anything and cannot support chaining
+  var getTrackRequestPromises = trackIds.map((id) => {
+    return new Promise((resolve, reject) => {
+      var track = parser.getTrackById(id);
+      var url = searchEndpoint + track.toString() + '&type=track&limit=1';
+
+      request.get(url, getTrackAuth, function(error, response, body) {
+        if (!error && response.statusCode == 200) {
+          try {
+            var jsonResponse = JSON.parse(body);
+
+            if(jsonResponse.hasOwnProperty('tracks')) {
               if(jsonResponse.tracks.items.length > 0) {
                 track._spotifyUri = jsonResponse.tracks.items[0].uri;
                 tracksToAdd.push(track._spotifyUri);
               }
             }
 
-            resolve();
-          });
-        });
-      });
-
-      // when all track promises have completed add to the playlist
-      Promise.all(addTrackRequests).then(function() {
-        var playlistOptions = {
-          url: 'https://api.spotify.com/v1/users/' + user + '/playlists/' + playlistId + '/tracks',
-          headers: { 'Authorization': 'Bearer ' + accessToken },
-          body: JSON.stringify({ uris: tracksToAdd.slice(0, 99) }),
-          json: true
-        };
-
-        var i = 0;
-
-        request.post(playlistOptions, function(error, response, body) {
-          console.log(++i, body);
-          
-          if(!body.error) {
-            res.status(201).send(result);
+          } catch(e) {
+            console.log('Error parsing response: ', e);
+            reject('Error parsing response: ' + e);
           }
-        });
-      });
-    }
+        } else {
+          console.log('Get Track Error: ', body);
+          reject('Get Track Error: ' + body);
+        }
 
-    // res.sendStatus(400);
+        resolve(track);
+      });
+    });
   });
-});
+
+  // when all track promises have completed add to the playlist
+  Promise.all(getTrackRequestPromises).then(function(tracks) {
+    var playlistOptions = {
+      url: 'https://api.spotify.com/v1/users/' + user + '/playlists/' + playlistId + '/tracks',
+      headers: { 'Authorization': 'Bearer ' + accessToken },
+      body: JSON.stringify({ uris: tracksToAdd }),
+      json: true
+    };
+
+    request.post(playlistOptions, function(error, response, body) {
+      if(!error && response.statusCode == 201) {
+        callback(null, tracks);
+      } else {
+        console.log('Add tracks to playlist error: ', body);
+        callback('Add tracks to playlist error', body);
+      }
+    });
+  });
+}
 
 
 console.log('Listening on 8888');

@@ -266,8 +266,6 @@
                   exportButtons[i].addEventListener('click', function(event) {
                     selectedPlaylist = event.target.name;
 
-                    console.log(JSON.stringify({ 'user': user }));
-
                     $.ajax({
                       type: 'POST',
                       url: selectedPlaylist + '/export',
