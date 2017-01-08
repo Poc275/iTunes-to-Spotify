@@ -78,7 +78,7 @@
 			<key>Name</key><string>Waiting Room</string>
 			<key>Artist</key><string>Fugazi</string>
 			<key>Album Artist</key><string>Fugazi</string>
-			<key>Album</key><string>Fugazi</string>
+			<key>Album</key><string>13 Songs</string>
 			<key>Genre</key><string>Indie</string>
 			<key>Kind</key><string>MPEG audio file</string>
 			<key>Size</key><integer>2800656</integer>
@@ -267,9 +267,9 @@
 		<dict>
 			<key>Track ID</key><integer>17054</integer>
 			<key>Name</key><string>Baby I Need Your Loving</string>
-			<key>Artist</key><string>The Four Tops</string>
-			<key>Album Artist</key><string>The Four Tops</string>
-			<key>Album</key><string>The Four Tops - The Ultimate Collection</string>
+			<key>Artist</key><string>Four Tops</string>
+			<key>Album Artist</key><string>Four Tops</string>
+			<key>Album</key><string>The Ultimate Collection</string>
 			<key>Genre</key><string>Soul</string>
 			<key>Kind</key><string>MPEG audio file</string>
 			<key>Size</key><integer>2638634</integer>
@@ -428,10 +428,10 @@
 		<dict>
 			<key>Track ID</key><integer>31726</integer>
 			<key>Name</key><string>The Ship Song</string>
-			<key>Artist</key><string>Nick Cave &#38; The Bad Seeds</string>
+			<key>Artist</key><string>Nick Cave and The Bad Seeds</string>
 			<key>Album Artist</key><string>Nick Cave &#38; The Bad Seeds</string>
 			<key>Composer</key><string>Nick Cave</string>
-			<key>Album</key><string>The Best Of Nick Cave &#38; The Bad Seeds</string>
+			<key>Album</key><string>The Best Of</string>
 			<key>Genre</key><string>Rock</string>
 			<key>Kind</key><string>MPEG audio file</string>
 			<key>Size</key><integer>5720188</integer>
@@ -658,10 +658,10 @@
 		<key>39718</key>
 		<dict>
 			<key>Track ID</key><integer>39718</integer>
-			<key>Name</key><string>Altamont (Live Radio 1 Session)</string>
+			<key>Name</key><string>Altamont</string>
 			<key>Artist</key><string>Echo &#38; The Bunnymen</string>
 			<key>Album Artist</key><string>Echo &#38; The Bunnymen</string>
-			<key>Album</key><string>Echo &#38; The Bunnymen</string>
+			<key>Album</key><string>Evergreen</string>
 			<key>Genre</key><string>Rock</string>
 			<key>Kind</key><string>MPEG audio file</string>
 			<key>Size</key><integer>3443131</integer>
@@ -689,7 +689,7 @@
 			<key>Track ID</key><integer>44386</integer>
 			<key>Name</key><string>Spectre</string>
 			<key>Artist</key><string>Radiohead</string>
-			<key>Album</key><string>Radiohead</string>
+			<key>Album</key><string>Spectre</string>
 			<key>Genre</key><string>Rock</string>
 			<key>Kind</key><string>MPEG audio file</string>
 			<key>Size</key><integer>8376267</integer>

@@ -186,6 +186,45 @@ describe('iTunes single playlist xml file track tests', function() {
 });
 
 
+describe('iTunes xml exported from a Mac can be parsed', function() {
+	var parser = new XMLParser();
+
+	before(function(done) {
+		parser.parse('mac-library.xml', function(err) {
+			parser.getPlaylists();
+			parser.getTracks();
+			done();
+		});
+	});
+
+	it('Mac XML file reads OK', function() {
+		expect(parser._parsedXml).to.not.be.null;
+	});
+
+	it('Mac library.xml contains 15 playlists', function() {
+		expect(parser._playlists).to.have.lengthOf(15);
+	});
+
+	it('Films playlist contains 3 items', function() {
+		var films = parser.getPlaylistByName('Films');
+		expect(films._name).to.equal('Films');
+		expect(films._trackIds).to.have.lengthOf(3);
+	});
+
+	it('Mac library.xml parses all tracks correctly', function() {
+		expect(parser._tracks).to.have.length.above(0);
+	});
+
+	it('Mac library.xml get track by id works correctly', function() {
+		var track = parser.getTrackById('327');
+		expect(track._id).to.equal('327');
+		expect(track._title).to.equal('Stuck Between Stations');
+		expect(track._artist).to.equal('The Hold Steady');
+		expect(track._album).to.equal('Boys & Girls In America (Deluxe)');
+	});
+});
+
+
 describe('iTunes full library xml file tests', function() {
 	var parser = new XMLParser();
 

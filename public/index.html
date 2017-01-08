@@ -3,34 +3,31 @@
   <head>
     <title>iTunes to Spotify Exporter</title>
     <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
-    <style type="text/css">
-      #login, #loggedin {
-        display: none;
-      }
-      .text-overflow {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        width: 500px;
-      }
-      .exported {
-        color: green;
-      }
-    </style>
+    <link rel="stylesheet" href="style.css">
   </head>
 
   <body>
     <div class="container">
       <div id="login">
         <h1>iTunes to Spotify exporter</h1>
+
+        <p><strong>What?</strong> An app that reads an iTunes library and creates equivalent playlists in Spotify.</p>
+        <p><strong>Why?</strong> I had a situation where I had 2 repositories of music, one in iTunes for music that I had purchased,
+          and one in Spotify for streaming. The latest iOS update made the music app look terrible, so I decided to 
+          combine the two in Spotify, but I didn't want to recreate playlists containing over 15,000 songs manually.</p>
+        <p><strong>Who?</strong> Made by <a href="http://poc275.co.uk">Peter O&apos;Connor</a>.</p>
+        <p><strong>Where?</strong> <a href="https://github.com/Poc275/iTunes-to-Spotify">Code available here</a>. Feel free to use and improve.</p>
+        <p><strong>When?</strong> Last updated on <time datetime="2017-01-08">8th Jan 2017.</time></p>
+        <p><strong>How?</strong></p>
         <ol>
-          <li>Log in with Spotify</li>
-          <li>Export your iTunes playlists/library in .xml format</li>
-          <li>Upload the .xml file</li>
-          <li>Decide what to export</li>
-          <li>Create the playlists in Spotify!</li>
+          <li>Log in to Spotify using the button below.</li>
+          <li>Export your iTunes playlists/library in .xml format.<br />
+              File > Library > Export Library.../Export Playlist...
+          </li>
+          <li>Upload the .xml file (don't worry, it is never stored on the server).</li>
+          <li>Export the playlist/s to Spotify!</li>
         </ol>
-        <a href="/login" class="btn btn-primary">Log in with Spotify</a>
+        <a href="/login" class="btn btn-primary">Log in to Spotify</a>
       </div>
 
       <div id="loggedin">
@@ -40,12 +37,15 @@
         <div id="oauth">
         </div>
 
-        <button class="btn btn-default" id="obtain-new-token">Obtain new token using the refresh token</button>
+        <button class="btn btn-default" id="obtain-new-token">Refresh Access Token</button>
         
-        <!-- xml file upload button -->
         <form action="/upload" method="post" enctype="multipart/form-data" id="itunes-upload-form">
-          <input type="file" name="itunesXmlFile" accept=".xml" required />
-          <input type="submit" class="btn btn-default" value="Upload iTunes .xml file" name="submit" />
+          <div class="form-group">
+            <label for="itunesXmlFile">Select iTunes .xml library file</label>
+            <input type="file" id="itunesXmlFile" name="itunesXmlFile" accept=".xml" required />
+            <p class="help-block">To export iTunes library: File > Library > Export Library... or Export Playlist...</p>
+          </div>
+          <input type="submit" class="btn btn-default" value="Upload" name="submit" />
         </form>
 
         <div id="playlists">
@@ -58,7 +58,14 @@
     </div>
 
     <script id="user-profile-template" type="text/x-handlebars-template">
-      <h1>Logged in as {{display_name}}</h1>
+      <h1>iTunes to Spotify exporter</h1>
+      <h2>Hi 
+        {{#if display_name}}
+          {{display_name}}
+        {{else}}
+          {{id}}
+        {{/if}}
+      </h2>
       <div class="media">
         <div class="pull-left">
           <img class="media-object" width="150" src="{{images.0.url}}" />

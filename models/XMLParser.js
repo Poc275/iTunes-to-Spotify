@@ -74,11 +74,31 @@ XMLParser.prototype.getPlaylists = function() {
 XMLParser.prototype.getTracks = function() {
 	var tracks = this._parsedXml.plist.dict[0].dict[0].dict;
 
+	// get keys and construct an array
+	var tracksKeys = Object.keys(tracks).map(function(key) {
+    	return tracks[key];
+  	});
+
 	for(var i = 0; i < tracks.length; i++) {
-		var newTrack = new Track(tracks[i].integer[0],
-								tracks[i].string[0],
-								tracks[i].string[1],
-								tracks[i].string[3]);
+
+		// The album index can vary depending on the presence of other meta-data
+		// Id, Name, Artist are always in order, so we can index them manually,
+		// for the album, we search the keys for the 'Album' information
+		// we subtract 1 to account for the id which is in the integer collection
+		var albumIndex = tracksKeys[i].key.indexOf('Album') - 1;
+		var album;
+
+		if(albumIndex < 0) {
+			// no album information found
+			album = null;
+		} else {
+			album = tracks[i].string[albumIndex];
+		}
+
+		var newTrack = new Track(tracks[i].integer[0],	// Id
+								tracks[i].string[0],	// Name
+								tracks[i].string[1],	// Artist
+								album);					// Album
 
 		this._tracks.push(newTrack);
 	}

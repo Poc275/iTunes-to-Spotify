@@ -1,0 +1,22 @@
+#login, #loggedin {
+	display: none;
+}
+
+#oauth {
+	
+}
+
+.text-overflow {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	width: 500px;
+}
+
+.exported {
+	color: green;
+}
+
+#obtain-new-token {
+	margin: 0 0 25px 0;
+}

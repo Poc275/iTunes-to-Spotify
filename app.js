@@ -162,6 +162,7 @@ app.post('/upload', function(req, res) {
       if(err) {
         throw err;
       }
+
       parser.getPlaylists();
       parser.getTracks();
       res.json(parser._playlists);
@@ -194,8 +195,8 @@ app.post('/:playlist/export', function(req, res) {
 
   // consts are empirical, documentation doesn't state
   // what the actual limits are...
-  const chunkSize = 80;
-  const wait = 10000;
+  const chunkSize = 50;
+  const wait = 20000;
 
   if(playlist === undefined) {
     return res.sendStatus(404);
