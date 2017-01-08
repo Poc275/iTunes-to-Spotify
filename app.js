@@ -216,11 +216,19 @@ app.post('/:playlist/export', function(req, res) {
       var playlistId = body.id;
       var chunks = [];
       var x = 0;
+
+      var cumTotal = 0;
       
       // split into chunks to avoid hitting API rate limit
       for(var i = 0; i < playlist._trackIds.length; i += chunkSize) {
         chunks.push(playlist._trackIds.slice(i, i + chunkSize));
       }
+
+      chunks.forEach(function(chunk) {
+        cumTotal += chunk.length;
+      });
+
+      console.log(cumTotal, ' should equal ', playlist._trackIds.length);
 
       var loopChunks = function(chunk) {
         console.log('chunk ', x + 1, ' request started');
@@ -230,11 +238,12 @@ app.post('/:playlist/export', function(req, res) {
             res.sendStatus(400);
           }
 
-          // add promise track response to result array
-          // which we return to the user to show if the track was added
-          result.forEach(function(track) {
-            tracks.push(track);
-          });
+          // if we added any tracks, add them to the response
+          if(result) {
+            result.forEach(function(track) {
+              tracks.push(track);
+            });
+          }
 
           console.log('chunk ', x + 1, ' completed');
 
@@ -300,21 +309,26 @@ function addTracksToPlaylist(trackIds, user, playlistId, accessToken, callback) 
 
   // when all track promises have completed add to the playlist
   Promise.all(getTrackRequestPromises).then(function(tracks) {
-    var playlistOptions = {
-      url: 'https://api.spotify.com/v1/users/' + user + '/playlists/' + playlistId + '/tracks',
-      headers: { 'Authorization': 'Bearer ' + accessToken },
-      body: JSON.stringify({ uris: tracksToAdd }),
-      json: true
-    };
+    if(tracksToAdd.length === 0) {
+      // no tracks to add
+      callback(null, null);
+    } else {
+      var playlistOptions = {
+        url: 'https://api.spotify.com/v1/users/' + user + '/playlists/' + playlistId + '/tracks',
+        headers: { 'Authorization': 'Bearer ' + accessToken },
+        body: JSON.stringify({ uris: tracksToAdd }),
+        json: true
+      };
 
-    request.post(playlistOptions, function(error, response, body) {
-      if(!error && response.statusCode == 201) {
-        callback(null, tracks);
-      } else {
-        console.log('Add tracks to playlist error: ', body);
-        callback('Add tracks to playlist error', body);
-      }
-    });
+      request.post(playlistOptions, function(error, response, body) {
+        if(!error && response.statusCode == 201) {
+          callback(null, tracks);
+        } else {
+          console.log('Add tracks to playlist error: ', body);
+          callback('Add tracks to playlist error', null);
+        }
+      });
+    }
   });
 }
 
