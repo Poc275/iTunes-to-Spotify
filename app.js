@@ -1,53 +1,34 @@
-/**
- * This is an example of a basic node.js script that performs
- * the Authorization Code oAuth2 flow to authenticate against
- * the Spotify Accounts.
- *
- * For more information, read
- * https://developer.spotify.com/web-api/authorization-guide/#authorization_code_flow
- */
-
-var express = require('express'); // Express web server framework
-var request = require('request'); // "Request" library
+var express = require('express');
+var request = require('request');
 var querystring = require('querystring');
 var cookieParser = require('cookie-parser');
-var config = require('./config.js');
 var multer = require('multer');
 var storage = multer.memoryStorage();
 var upload = multer({ storage: storage }).single('itunesXmlFile');
 var bodyParser = require('body-parser');
-
-var XMLParser = require('./models/XMLParser');
-var parser;
-
-var client_id = config.client_id;
-var client_secret = config.client_secret;
-var redirect_uri = config.redirect_uri;
-
-/**
- * Generates a random string containing numbers and letters
- * @param  {number} length The length of the string
- * @return {string} The generated string
- */
-var generateRandomString = function(length) {
-  var text = '';
-  var possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-
-  for (var i = 0; i < length; i++) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
-  }
-  return text;
-};
-
 var stateKey = 'spotify_auth_state';
-
 var app = express();
+var server = require('http').createServer(app);
+var io = require('socket.io')(server);
 
 app.use(express.static(__dirname + '/public')).use(cookieParser());
 app.use(bodyParser.json());
 
-app.get('/login', function(req, res) {
+var XMLParser = require('./models/XMLParser');
+var parser;
 
+var config = require('./config.js');
+var client_id = config.client_id;
+var client_secret = config.client_secret;
+var redirect_uri = config.redirect_uri;
+
+
+io.on('connection', function(client) {
+  console.log(client.id);
+});
+
+
+app.get('/login', function(req, res) {
   var state = generateRandomString(16);
   res.cookie(stateKey, state);
 
@@ -63,11 +44,11 @@ app.get('/login', function(req, res) {
     }));
 });
 
+
 app.get('/callback', function(req, res) {
 
   // your application requests refresh and access tokens
   // after checking the state parameter
-
   var code = req.query.code || null;
   var state = req.query.state || null;
   var storedState = req.cookies ? req.cookies[stateKey] : null;
@@ -125,6 +106,7 @@ app.get('/callback', function(req, res) {
   }
 });
 
+
 app.get('/refresh_token', function(req, res) {
 
   // requesting access token from refresh token
@@ -157,21 +139,29 @@ app.post('/upload', function(req, res) {
       res.sendStatus(400);
     }
 
+    io.to(req.body.socketid).emit('parseProgress', {status: 'Parsing file...', progress: 25});
+
     parser = new XMLParser();
     parser.parseBuffer(req.file.buffer, function(err) {
       if(err) {
         throw err;
       }
 
+      io.to(req.body.socketid).emit('parseProgress', {status: 'Getting playlists...', progress: 50});
+      
       parser.getPlaylists();
+      io.to(req.body.socketid).emit('parseProgress', {status: 'Getting tracks...', progress: 70});
+
       parser.getTracks();
+      io.to(req.body.socketid).emit('parseProgress', {status: 'Complete!', progress: 100});
+
       res.json(parser._playlists);
     });
   });
 });
 
 
-app.get('/:playlist/tracks', function(req, res) {
+app.post('/:playlist/tracks', function(req, res) {
   var playlist = parser.getPlaylistByName(req.params.playlist);
   var tracks = [];
 
@@ -212,7 +202,11 @@ app.post('/:playlist/export', function(req, res) {
 
   request.post(authOptions, function(error, response, body) {
     if (!error && response.statusCode == 201) {
-      // playlist created OK, now add the tracks
+
+      // playlist created OK, send status update
+      io.to(req.body.socketid).emit('exportProgress', {playlist: playlist._name, status: 'Playlist created'});
+
+      //now add the tracks
       var playlistId = body.id;
       var chunks = [];
       var x = 0;
@@ -245,6 +239,8 @@ app.post('/:playlist/export', function(req, res) {
             });
           }
 
+          // report progress
+          io.to(req.body.socketid).emit('exportProgress', {playlist: playlist._name, status: x + 1 + ' / ' + chunks.length + ' chunks complete'});
           console.log('chunk ', x + 1, ' completed');
 
           x++;
@@ -255,6 +251,7 @@ app.post('/:playlist/export', function(req, res) {
             }, wait);
           } else {
             console.log('all chunks processed');
+            io.to(req.body.socketid).emit('exportProgress', {playlist: playlist._name, status: 'Export complete'});
             res.status(201).send(tracks);
           }
         });
@@ -333,5 +330,21 @@ function addTracksToPlaylist(trackIds, user, playlistId, accessToken, callback) 
 }
 
 
+/**
+ * Generates a random string containing numbers and letters
+ * @param  {number} length The length of the string
+ * @return {string} The generated string
+ */
+var generateRandomString = function(length) {
+  var text = '';
+  var possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+
+  for (var i = 0; i < length; i++) {
+    text += possible.charAt(Math.floor(Math.random() * possible.length));
+  }
+  return text;
+};
+
+
 console.log('Listening on 8888');
-app.listen(8888);
+server.listen(8888);

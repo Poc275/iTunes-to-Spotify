@@ -9,7 +9,7 @@
   <body>
     <div class="container">
       <div id="login">
-        <h1>iTunes to Spotify exporter</h1>
+        <h1>iTunes to Spotify Exporter</h1>
 
         <p><strong>What?</strong> An app that reads an iTunes library and creates equivalent playlists in Spotify.</p>
         <p><strong>Why?</strong> I had a situation where I had 2 repositories of music, one in iTunes for music that I had purchased,
@@ -31,22 +31,29 @@
       </div>
 
       <div id="loggedin">
-        <div id="user-profile">
-        </div>
 
-        <div id="oauth">
+        <div id="user-profile">
         </div>
 
         <button class="btn btn-default" id="obtain-new-token">Refresh Access Token</button>
         
         <form action="/upload" method="post" enctype="multipart/form-data" id="itunes-upload-form">
+          <h2>Upload</h2>
           <div class="form-group">
-            <label for="itunesXmlFile">Select iTunes .xml library file</label>
+            <label for="itunesXmlFile">Select iTunes .xml file</label>
             <input type="file" id="itunesXmlFile" name="itunesXmlFile" accept=".xml" required />
-            <p class="help-block">To export iTunes library: File > Library > Export Library... or Export Playlist...</p>
+            <p class="help-block">To export iTunes library/playlist: File > Library > Export Library... or Export Playlist...</p>
+            <input type="hidden" id="socketid" name="socketid" />
           </div>
           <input type="submit" class="btn btn-default" value="Upload" name="submit" />
         </form>
+
+        <br />
+
+        <div class="progress">
+          <div class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+          </div>
+        </div>
 
         <div id="playlists">
         </div>
@@ -58,7 +65,7 @@
     </div>
 
     <script id="user-profile-template" type="text/x-handlebars-template">
-      <h1>iTunes to Spotify exporter</h1>
+      <h1>iTunes to Spotify Exporter</h1>
       <h2>Hi 
         {{#if display_name}}
           {{display_name}}
@@ -72,7 +79,9 @@
         </div>
         <div class="media-body">
           <dl class="dl-horizontal">
-            <dt>Display name</dt><dd class="clearfix">{{display_name}}</dd>
+            {{#if display_name}}
+              <dt>Display name</dt><dd class="clearfix">{{display_name}}</dd>
+            {{/if}}
             <dt>Id</dt><dd>{{id}}</dd>
             <dt>Email</dt><dd>{{email}}</dd>
             <dt>Spotify URI</dt><dd><a href="{{external_urls.spotify}}">{{external_urls.spotify}}</a></dd>
@@ -84,16 +93,9 @@
       </div>
     </script>
 
-    <script id="oauth-template" type="text/x-handlebars-template">
-      <h2>oAuth info</h2>
-      <dl class="dl-horizontal">
-        <dt>Access token</dt><dd class="text-overflow">{{access_token}}</dd>
-        <dt>Refresh token</dt><dd class="text-overflow">{{refresh_token}}></dd>
-      </dl>
-    </script>
 
     <script id="playlists-template" type="text/x-handlebars-template">
-      <h2>We found {{this.length}} {{pluralPlaylistCheck this.length}}</h2>
+      <h3>We found {{this.length}} {{pluralPlaylistCheck this.length}}</h3>
       <ul>
         {{#each this}}
           <li>{{_name}} 
@@ -105,19 +107,24 @@
             <button class="btn btn-xs export-button" type="button" name="{{_name}}">
               Export to Spotify
             </button>
+
+            <i class="glyphicon glyphicon-refresh" id="{{escapePlaylistName _name}}"></i>
+            <small class="export-progress" id="{{escapePlaylistName _name}}-progress"></small>
           </li>
         {{/each}}
       </ul>
     </script>
 
+
     <script id="playlist-tracks-template" type="text/x-handlebars-template">
-      <h3>{{selectedPlaylist}} - {{this.length}} {{pluralTrackCheck this.length}}</h3>
+      <h4>{{selectedPlaylist}} - {{this.length}} {{pluralTrackCheck this.length}}</h4>
       <ul>
         {{#each this}}
           <li class="{{#if _spotifyUri}} exported {{/if}}">{{_title}} - {{_artist}} ({{_album}})</li>
         {{/each}}
       </ul>
     </script>
+
 
     <script src="//cdnjs.cloudflare.com/ajax/libs/handlebars.js/2.0.0-alpha.1/handlebars.min.js"></script>
     <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
@@ -146,10 +153,6 @@
         var userProfileTemplate = Handlebars.compile(userProfileSource);
         var userProfilePlaceholder = document.getElementById('user-profile');
 
-        var oauthSource = document.getElementById('oauth-template').innerHTML;
-        var oauthTemplate = Handlebars.compile(oauthSource);
-        var oauthPlaceholder = document.getElementById('oauth');
-
         var playlistSource = document.getElementById('playlists-template').innerHTML;
         var playlistsTemplate = Handlebars.compile(playlistSource);
         var playlistsPlaceholder = document.getElementById('playlists');
@@ -157,17 +160,17 @@
         // handlebars helpers to check for plurals
         Handlebars.registerHelper('pluralPlaylistCheck', function(length) {
           if(length === 1) {
-            return 'Playlist';
+            return 'playlist';
           } else {
-            return 'Playlists';
+            return 'playlists';
           }
         });
 
         Handlebars.registerHelper('pluralTrackCheck', function(length) {
           if(length === 1) {
-            return 'Track';
+            return 'track';
           } else {
-            return 'Tracks';
+            return 'tracks';
           }
         });
 
@@ -186,18 +189,19 @@
         var refresh_token = params.refresh_token;
         var error = params.error;
 
+        // Handlebars helper that escapes a playlist name to prevent
+        // any selection/css errors from special characters
+        Handlebars.registerHelper('escapePlaylistName', function(name) {
+          var escapedName = name.replace(/([ #;?%&,.+*~\'’:"!^$[\]()=>|\/@])/g, '-');
+          return escapedName + '-glyphicon';
+        });
+
         if (error) {
           alert('There was an error during the authentication');
         } else {
           if (access_token) {
             // store reference to access token for future requests
             accessToken = access_token;
-
-            // render oauth info
-            oauthPlaceholder.innerHTML = oauthTemplate({
-              access_token: access_token,
-              refresh_token: refresh_token
-            });
 
             $.ajax({
                 url: 'https://api.spotify.com/v1/me',
@@ -231,17 +235,15 @@
 
               // update reference to access token
               accessToken = data.access_token;
-
-              oauthPlaceholder.innerHTML = oauthTemplate({
-                access_token: access_token,
-                refresh_token: refresh_token
-              });
             });
           }, false);
 
 
           // upload itunes .xml file
           $('#itunes-upload-form').submit(function() {
+            // show progress bar
+            $('.progress').show();
+
             $(this).ajaxSubmit({
               error: function(xhr) {
                 console.log('Error: ' + xhr.status);
@@ -252,18 +254,32 @@
                 // now that we have playlists, register the get tracks/export button click events
                 var getTracksButtons = document.getElementsByClassName('get-tracks-button');
                 var exportButtons = document.getElementsByClassName('export-button');
+                var socketId = document.getElementById('socketid');
 
                 for(var i = 0; i < getTracksButtons.length; i++) {
                   getTracksButtons[i].addEventListener('click', function(event) {
                     selectedPlaylist = event.target.name;
+                    $('#' + escapePlaylistName(selectedPlaylist)).css("visibility", "visible");
+                    $('#' + escapePlaylistName(selectedPlaylist)).addClass('gly-spin');
 
                     $.ajax({
+                      type: 'POST',
                       url: selectedPlaylist + '/tracks',
+                      data: JSON.stringify({ 'socketid': socketId.value }),
+                      contentType: 'application/json; charset=utf-8',
                       error: function(xhr) {
                         console.log('Error: ' + xhr.status);
+
+                        // update progress button
+                        $('#' + escapePlaylistName(selectedPlaylist)).css("visibility", "hidden");
+                        $('#' + escapePlaylistName(selectedPlaylist)).removeClass('gly-spin');
                       },
                       success: function(response) {
                         playlistTracksPlaceholder.innerHTML = playlistTracksTemplate(response);
+
+                        // update progress button
+                        $('#' + escapePlaylistName(selectedPlaylist)).css("visibility", "hidden");
+                        $('#' + escapePlaylistName(selectedPlaylist)).removeClass('gly-spin');
                       }
                     });
                   });
@@ -272,17 +288,27 @@
                 for(var i = 0; i < exportButtons.length; i++) {
                   exportButtons[i].addEventListener('click', function(event) {
                     selectedPlaylist = event.target.name;
+                    $('#' + escapePlaylistName(selectedPlaylist)).css("visibility", "visible");
+                    $('#' + escapePlaylistName(selectedPlaylist)).addClass('gly-spin');
 
                     $.ajax({
                       type: 'POST',
                       url: selectedPlaylist + '/export',
-                      data: JSON.stringify({ 'user': user, 'access_token': accessToken }),
+                      data: JSON.stringify({ 'user': user, 'access_token': accessToken, 'socketid': socketid.value }),
                       contentType: 'application/json; charset=utf-8',
                       error: function(xhr) {
                         console.log('Error: ' + xhr.status);
+
+                        // update progress button
+                        $('#' + escapePlaylistName(selectedPlaylist)).css("visibility", "hidden");
+                        $('#' + escapePlaylistName(selectedPlaylist)).removeClass('gly-spin');
                       },
                       success: function(response) {
                         playlistTracksPlaceholder.innerHTML = playlistTracksTemplate(response);
+
+                        // update progress button
+                        $('#' + escapePlaylistName(selectedPlaylist)).css("visibility", "hidden");
+                        $('#' + escapePlaylistName(selectedPlaylist)).removeClass('gly-spin');
                       }
                     });
                   });
@@ -293,9 +319,37 @@
             // disable page refresh, otherwise AJAX request gets cancelled
             return false;
           });
-
         }
       })();
+
+
+      // function that escapes a playlist name to prevent selection errors
+      // same as Handlebars helper but for use outside of Handlebars
+      function escapePlaylistName(name) {
+        var escapedName = name.replace(/([ #;?%&,.+*~\'’:"!^$[\]()=>|\/@])/g, '-');
+        return escapedName + '-glyphicon';
+      }
+    </script>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      var socket = io.connect('http://localhost:8888');
+
+      socket.on('connect', function () {
+        // socket connected - add id to form so we can pass it
+        // in requests so progress can be updated to an individual client
+        document.getElementById('socketid').value = socket.id;
+      });
+
+      socket.on('parseProgress' , function(data) {
+        $('.progress-bar').css("width", data.progress + "%");
+        $('.progress-bar').html(data.status);
+      });
+
+      socket.on('exportProgress', function(data) {
+        $('#' + escapePlaylistName(data.playlist) + '-progress').html(data.status);
+      });
+
     </script>
 
   </body>
