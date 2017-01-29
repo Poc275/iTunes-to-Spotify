@@ -10,7 +10,7 @@
 
 **Who?** [Peter O&apos;Connor](http://poc275.co.uk)
 
-**Where?** [Feel free to use and improve the code](https://github.com/Poc275/iTunes-to-Spotify)
+**Where?** [https://itunes-to-spotify-exporter.herokuapp.com/](https://itunes-to-spotify-exporter.herokuapp.com/)
 
 **When?** Last updated on 8th Jan 2017.
 
