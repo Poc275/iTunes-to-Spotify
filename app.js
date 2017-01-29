@@ -349,4 +349,4 @@ var generateRandomString = function(length) {
 console.log('Listening on 8888');
 // listen on Heroku's dynamically assigned port in production,
 // or 8888 in development
-server.listen(process.env.PORT || 8888);
+server.listen(process.env.PORT);
