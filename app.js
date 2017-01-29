@@ -22,14 +22,6 @@ var client_id = process.env.client_id;
 var client_secret = process.env.client_secret;
 var redirect_uri = process.env.redirect_uri;
 
-// Heroku doesn't play well with socket.io out of the box
-// So we have to set up polling instead
-// https://devcenter.heroku.com/articles/using-socket-io-with-node-js-on-heroku
-io.configure(function() {
-  io.set("transports", ["xhr-polling"]);
-  io.set("polling duration", 10);
-});
-
 io.on('connection', function(client) {
   console.log(client.id);
 });
