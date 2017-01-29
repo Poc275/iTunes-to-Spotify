@@ -236,21 +236,21 @@ describe('iTunes full library xml file tests', function() {
 		});
 	});
 
-	it('library.xml contains 48 playlists', function() {
-		expect(parser._playlists).to.have.lengthOf(48);
+	it('library.xml contains 57 playlists', function() {
+		expect(parser._playlists).to.have.lengthOf(57);
 	});
 
-	it('library.xml final playlist contains 3 track ids', function() {
-		expect(parser._playlists[47]._trackIds).to.have.lengthOf(2);
+	it('library.xml final playlist contains 23 track ids', function() {
+		expect(parser._playlists[47]._trackIds).to.have.lengthOf(23);
 	});
 
 	it('library.xml final playlist object name correct', function() {
-		expect(parser._playlists[47]._name).to.equal('Untouchable Tracks');
+		expect(parser._playlists[47]._name).to.equal('Best Bits');
 	});
 
 	it('library.xml final playlist track ids are correct', function() {
-		expect(parser._playlists[47]._trackIds[0]).to.equal('34329');
-		expect(parser._playlists[47]._trackIds[1]).to.equal('20113');
+		expect(parser._playlists[47]._trackIds[0]).to.equal('34586');
+		expect(parser._playlists[47]._trackIds[1]).to.equal('36520');
 	});
 
 	it('Tones playlist created but is empty', function() {
