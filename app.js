@@ -138,7 +138,7 @@ app.post('/upload', function(req, res) {
       res.sendStatus(400);
     }
 
-    io.to(req.body.socketid).emit('parseProgress', {status: 'Parsing file...', progress: 25});
+    setInterval(io.to(req.body.socketid).emit('parseProgress', {status: 'Parsing file...', progress: 25}), 1000);
 
     parser = new XMLParser();
     parser.parseBuffer(req.file.buffer, function(err) {
@@ -146,13 +146,13 @@ app.post('/upload', function(req, res) {
         throw err;
       }
 
-      io.to(req.body.socketid).emit('parseProgress', {status: 'Getting playlists...', progress: 50});
+      setInterval(io.to(req.body.socketid).emit('parseProgress', {status: 'Getting playlists...', progress: 50}), 1000);
       
       parser.getPlaylists();
-      io.to(req.body.socketid).emit('parseProgress', {status: 'Getting tracks...', progress: 70});
+      setInterval(io.to(req.body.socketid).emit('parseProgress', {status: 'Getting tracks...', progress: 70}), 1000);
 
       parser.getTracks();
-      io.to(req.body.socketid).emit('parseProgress', {status: 'Complete!', progress: 100});
+      setInterval(io.to(req.body.socketid).emit('parseProgress', {status: 'Complete!', progress: 100}), 1000);
 
       res.json(parser._playlists);
     });
@@ -203,7 +203,7 @@ app.post('/:playlist/export', function(req, res) {
     if (!error && response.statusCode == 201) {
 
       // playlist created OK, send status update
-      io.to(req.body.socketid).emit('exportProgress', {playlist: playlist._name, status: 'Playlist created'});
+      setInterval(io.to(req.body.socketid).emit('exportProgress', {playlist: playlist._name, status: 'Playlist created'}), 1000);
 
       //now add the tracks
       var playlistId = body.id;
@@ -239,7 +239,7 @@ app.post('/:playlist/export', function(req, res) {
           }
 
           // report progress
-          io.to(req.body.socketid).emit('exportProgress', {playlist: playlist._name, status: x + 1 + ' / ' + chunks.length + ' chunks complete'});
+          setInterval(io.to(req.body.socketid).emit('exportProgress', {playlist: playlist._name, status: x + 1 + ' / ' + chunks.length + ' chunks complete'}), 1000);
           console.log('chunk ', x + 1, ' completed');
 
           x++;
@@ -250,7 +250,7 @@ app.post('/:playlist/export', function(req, res) {
             }, wait);
           } else {
             console.log('all chunks processed');
-            io.to(req.body.socketid).emit('exportProgress', {playlist: playlist._name, status: 'Export complete'});
+            setInterval(io.to(req.body.socketid).emit('exportProgress', {playlist: playlist._name, status: 'Export complete'}), 1000);
             res.status(201).send(tracks);
           }
         });
