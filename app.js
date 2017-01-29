@@ -250,7 +250,7 @@ app.post('/:playlist/export', function(req, res) {
             }, wait);
           } else {
             console.log('all chunks processed');
-            setInterval(io.to(req.body.socketid).emit('exportProgress', {playlist: playlist._name, status: 'Export complete'}), 1000);
+            io.to(req.body.socketid).emit('exportProgress', {playlist: playlist._name, status: 'Export complete'});
             res.status(201).send(tracks);
           }
         });
