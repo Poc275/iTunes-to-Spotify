@@ -138,7 +138,7 @@ app.post('/upload', function(req, res) {
       res.sendStatus(400);
     }
 
-    setInterval(io.to(req.body.socketid).emit('parseProgress', {status: 'Parsing file...', progress: 25}), 1000);
+    io.to(req.body.socketid).emit('parseProgress', {status: 'Parsing file...', progress: 25});
 
     parser = new XMLParser();
     parser.parseBuffer(req.file.buffer, function(err) {
@@ -146,13 +146,13 @@ app.post('/upload', function(req, res) {
         throw err;
       }
 
-      setInterval(io.to(req.body.socketid).emit('parseProgress', {status: 'Getting playlists...', progress: 50}), 1000);
+      io.to(req.body.socketid).emit('parseProgress', {status: 'Getting playlists...', progress: 50});
       
       parser.getPlaylists();
-      setInterval(io.to(req.body.socketid).emit('parseProgress', {status: 'Getting tracks...', progress: 70}), 1000);
+      io.to(req.body.socketid).emit('parseProgress', {status: 'Getting tracks...', progress: 70});
 
       parser.getTracks();
-      setInterval(io.to(req.body.socketid).emit('parseProgress', {status: 'Complete!', progress: 100}), 1000);
+      io.to(req.body.socketid).emit('parseProgress', {status: 'Complete!', progress: 100});
 
       res.json(parser._playlists);
     });
@@ -203,7 +203,7 @@ app.post('/:playlist/export', function(req, res) {
     if (!error && response.statusCode == 201) {
 
       // playlist created OK, send status update
-      setInterval(io.to(req.body.socketid).emit('exportProgress', {playlist: playlist._name, status: 'Playlist created'}), 1000);
+      io.to(req.body.socketid).emit('exportProgress', {playlist: playlist._name, status: 'Playlist created'});
 
       //now add the tracks
       var playlistId = body.id;
@@ -239,7 +239,7 @@ app.post('/:playlist/export', function(req, res) {
           }
 
           // report progress
-          setInterval(io.to(req.body.socketid).emit('exportProgress', {playlist: playlist._name, status: x + 1 + ' / ' + chunks.length + ' chunks complete'}), 1000);
+          io.to(req.body.socketid).emit('exportProgress', {playlist: playlist._name, status: x + 1 + ' / ' + chunks.length + ' chunks complete'});
           console.log('chunk ', x + 1, ' completed');
 
           x++;
