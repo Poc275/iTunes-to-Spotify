@@ -18,7 +18,8 @@
   },
   "scripts": {
     "test": "nyc mocha test",
-    "coverage": "nyc report --reporter=text-lcov | coveralls"
+    "coverage": "nyc report --reporter=text-lcov | coveralls",
+    "start": "node app.js"
   },
   "devDependencies": {
     "coveralls": "^2.11.15",
