@@ -17,10 +17,10 @@ app.use(bodyParser.json());
 var XMLParser = require('./models/XMLParser');
 var parser;
 
-//var config = require('./config.js');
-var client_id = process.env.client_id;
-var client_secret = process.env.client_secret;
-var redirect_uri = process.env.redirect_uri;
+var config = require('./config.js');
+var client_id = process.env.client_id || config.client_id;
+var client_secret = process.env.client_secret || config.client_secret;
+var redirect_uri = process.env.redirect_uri || config.redirect_uri;
 
 
 io.on('connection', function(client) {
@@ -347,4 +347,6 @@ var generateRandomString = function(length) {
 
 
 console.log('Listening on 8888');
-server.listen(8888);
+// listen on Heroku's dynamically assigned port in production,
+// or 8888 in development
+server.listen(process.env.PORT || 8888);
