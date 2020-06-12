@@ -8,7 +8,7 @@
   and one in Spotify for streaming. The latest iOS update made the music app look terrible, so I decided to 
   combine the two in Spotify, but I didn't want to recreate playlists containing over 15,000 songs manually.
 
-**Who?** [Peter O&apos;Connor](http://poc275.co.uk)
+**Who?** [Peter O&apos;Connor](https://poc275.me/)
 
 **Where?** [https://itunes-to-spotify-exporter.herokuapp.com/](https://itunes-to-spotify-exporter.herokuapp.com/)
 
